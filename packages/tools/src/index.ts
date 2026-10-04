@@ -1,6 +1,6 @@
 import type{ServerStatus,ToolContext,ToolDefinition}from"@yazoni/core";
 export interface ServerRuntime{status():Promise<ServerStatus>;start():Promise<void>;stop():Promise<void>;restart():Promise<void>;console(command:string):Promise<string>;readFile(path:string):Promise<string>;writeFile(path:string,content:string):Promise<void>;deleteFile(path:string):Promise<void>;listFiles(path:string):Promise<string[]>}
-const approval=(c:ToolContext)=>{if(!c.dryRun&&!c.approved)throw new Error("Explicit approval is required.");};
+const approval=(c:ToolContext)=>{if(c.dryRun)throw new Error("Dry-run mode never executes mutations.");if(!c.approved)throw new Error("Explicit approval is required.");};
 export const createServerTools=(r:ServerRuntime):ToolDefinition[]=>[
 {name:"server.get_status",description:"Inspect server state, version, players and performance.",risk:"safe",input:{},execute:async()=>r.status()},
 {name:"server.start",description:"Start the Minecraft server process.",risk:"moderate",input:{},execute:async(_,c)=>{approval(c);await r.start();return{ok:true}}},
