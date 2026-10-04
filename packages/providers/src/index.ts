@@ -21,7 +21,7 @@ export class ModrinthProvider implements PluginProvider {
     const response=await fetch(this.apiBase+"/project/"+encodeURIComponent(id)+"/version");
     if(!response.ok)throw new Error("Modrinth versions failed: "+response.status);
     const data=await response.json() as Array<{version_number:string;game_versions:string[];dependencies:Array<{project_id?:string;version_id?:string}>;files:Array<{url:string}>}>;
-    return data.map(version=>({id,name:id,source:"modrinth" as const,version:version.version_number,minecraftVersions:version.game_versions,dependencies:version.dependencies.map(dep=>dep.project_id??dep.version_id??"").filter(Boolean),downloadUrl:version.files[0]?.url}));
+    return data.map(version=>({id,name:id,source:"modrinth" as const,version:version.version_number,minecraftVersions:version.game_versions,dependencies:version.dependencies.map(dep=>dep.project_id??dep.version_id??"").filter(Boolean),...(version.files[0]?.url?{downloadUrl:version.files[0].url}:{})}));
   }
   async download(candidate:PluginCandidate):Promise<Uint8Array> {
     if(!candidate.downloadUrl)throw new Error("No download URL is available.");
