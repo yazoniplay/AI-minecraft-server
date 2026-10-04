@@ -3,7 +3,7 @@ services:
     name: yazoni-minecraft-agent
     runtime: node
     plan: free
-    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm build
     startCommand: node dist/agent/apps/agent/src/index.js
     healthCheckPath: /
     autoDeploy: true
