@@ -7,10 +7,14 @@ import {AuditLogger} from "./audit.js";
 import {ControlClient} from "./control-client.js";
 import {ServerAgent,GeminiFlashLiteProvider} from "@yazoni/ai";
 import type {ToolContext} from "@yazoni/core";
+import {createServer} from "node:http";
 
 const root=process.env.MINECRAFT_SERVER_DIR??process.env.ETERNALZERO_CACHE_ROOT??"./.yazoni-eternalzero-cache";
 if(!root){console.error("Set MINECRAFT_SERVER_DIR.");process.exitCode=1;}
 else{
+ const port=Number(process.env.PORT??10000);
+ const healthServer=createServer((_request,response)=>{response.writeHead(200,{"content-type":"application/json"});response.end(JSON.stringify({ok:true,service:"yazoni-minecraft-agent",runtime:process.env.ETERNALZERO_SFTP_HOST?"eternalzero-sftp":"local"}));});
+ healthServer.listen(port,"0.0.0.0",()=>console.log(`Health server listening on 0.0.0.0:${port}`));
  const runtime=process.env.ETERNALZERO_SFTP_HOST
   ? new EternalZeroRuntime({
       host:process.env.ETERNALZERO_SFTP_HOST,
