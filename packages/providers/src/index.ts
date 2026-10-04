@@ -56,7 +56,7 @@ export class SpigotProvider implements PluginProvider {
     if(!resourceResponse.ok)throw new Error("Spigot resource lookup failed: "+resourceResponse.status);
     const resource=await resourceResponse.json() as SpigetResource;
     const versions=versionsResponse.ok?await versionsResponse.json() as SpigetVersion[]:[];
-    const rows=versions.length?versions:[{version:resource.version}];
+    const rows:SpigetVersion[]=versions.length?versions:[{version:resource.version??"latest"}];
     return rows.map(v=>({id,name:resource.name,source:"spigot" as const,version:v.version??v.name??"latest",minecraftVersions:resource.testedVersions??[],dependencies:[],downloadUrl:this.api+"/resources/"+id+"/download"}));
   }
   async download(candidate:PluginCandidate):Promise<Uint8Array> {
