@@ -10,7 +10,7 @@ if(!root) {
 } else {
   const runtime=new MinecraftRuntime({
     root,
-    javaPath:process.env.JAVA_PATH,
+    javaPath:process.env.JAVA_PATH??"java",
     jarName:process.env.MINECRAFT_SERVER_JAR??"server.jar",
     maxMemory:process.env.MINECRAFT_MAX_MEMORY??"2G"
   });
