@@ -75,6 +75,7 @@ export class MinecraftRuntime implements ServerRuntime {
   }
 
   async readFile(relativePath:string):Promise<string>{return this.files.read(relativePath);}
+  async writeBinary(relativePath:string,content:Uint8Array):Promise<void>{return this.files.writeBytes(relativePath,content);}
   async writeFile(relativePath:string,content:string):Promise<void>{return this.files.write(relativePath,content);}
   async deleteFile(relativePath:string):Promise<void>{return this.files.remove(relativePath);}
   async listFiles(relativePath:string):Promise<string[]>{return this.files.list(relativePath);}
