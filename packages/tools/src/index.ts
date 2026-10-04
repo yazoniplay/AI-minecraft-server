@@ -1,5 +1,6 @@
 import type{ServerStatus,ToolContext,ToolDefinition}from"@yazoni/core";
-export interface ServerRuntime{\n remote?:boolean;
+export interface ServerRuntime{
+ remote?:boolean;
  status():Promise<ServerStatus>;start():Promise<void>;stop():Promise<void>;restart():Promise<void>;console(command:string):Promise<string>;
  readFile(path:string):Promise<string>;writeFile(path:string,content:string):Promise<void>;writeBinary(path:string,content:Uint8Array):Promise<void>;
  deleteFile(path:string):Promise<void>;listFiles(path:string):Promise<string[]>;ensureDirectory(path:string):Promise<void>;fileExists(path:string):Promise<boolean>;
