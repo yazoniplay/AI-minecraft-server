@@ -2,15 +2,26 @@ import {createServerTools} from "@yazoni/tools";
 import {createManagementTools} from "./management-tools.js";
 import {createConfigurationTools} from "./configuration-tools.js";
 import {MinecraftRuntime} from "./server-runtime.js";
+import {EternalZeroRuntime} from "./eternalzero-runtime.js";
 import {AuditLogger} from "./audit.js";
 import {ControlClient} from "./control-client.js";
 import {ServerAgent,GeminiFlashLiteProvider} from "@yazoni/ai";
 import type {ToolContext} from "@yazoni/core";
 
-const root=process.env.MINECRAFT_SERVER_DIR;
+const root=process.env.MINECRAFT_SERVER_DIR??process.env.ETERNALZERO_CACHE_ROOT??"./.yazoni-eternalzero-cache";
 if(!root){console.error("Set MINECRAFT_SERVER_DIR.");process.exitCode=1;}
 else{
- const runtime=new MinecraftRuntime({root,javaPath:process.env.JAVA_PATH??"java",jarName:process.env.MINECRAFT_SERVER_JAR??"server.jar",maxMemory:process.env.MINECRAFT_MAX_MEMORY??"2G"});
+ const runtime=process.env.ETERNALZERO_SFTP_HOST
+  ? new EternalZeroRuntime({
+      host:process.env.ETERNALZERO_SFTP_HOST,
+      port:Number(process.env.ETERNALZERO_SFTP_PORT??22),
+      username:process.env.ETERNALZERO_SFTP_USERNAME??"",
+      password:process.env.ETERNALZERO_SFTP_PASSWORD,
+      privateKey:process.env.ETERNALZERO_SFTP_PRIVATE_KEY,
+      root:process.env.ETERNALZERO_SFTP_ROOT??".",
+      cacheRoot:process.env.ETERNALZERO_CACHE_ROOT??"./.yazoni-eternalzero-cache"
+    })
+  : new MinecraftRuntime({root,javaPath:process.env.JAVA_PATH??"java",jarName:process.env.MINECRAFT_SERVER_JAR??"server.jar",maxMemory:process.env.MINECRAFT_MAX_MEMORY??"2G"});
  const audit=new AuditLogger(root);
  const tools=audit.wrap([...createServerTools(runtime),...createManagementTools(runtime),...createConfigurationTools(runtime)]);
  const apiKey=process.env.GEMINI_API_KEY;
