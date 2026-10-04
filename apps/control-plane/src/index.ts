@@ -33,10 +33,16 @@ const server=createServer(async(req,res)=>{
   if(url.pathname==="/health"){return json(res,200,{ok:true,agents:Object.keys(state.agents).length});}
   if(url.pathname==="/v1/agents/pair"&&req.method==="POST"){
    const b=await body(req);
-   if(state.pairingConsumed)return json(res,409,{error:"Pairing code has already been consumed. Generate a new pairing code on the control plane before pairing another agent."});
    if(b.pairingCode!==pairingCode)return json(res,401,{error:"Invalid pairing code."});
    const serverId=String(b.serverId??"").trim();
    if(!/^[a-zA-Z0-9._-]{1,80}$/.test(serverId))return json(res,400,{error:"Invalid serverId."});
+   const existing=state.agents[serverId];
+   if(existing){
+    existing.lastSeen=new Date().toISOString();
+    await save();
+    return json(res,200,{serverId,token:existing.token,recovered:true});
+   }
+   if(state.pairingConsumed)return json(res,409,{error:"Pairing code has already been consumed. Generate a new pairing code on the control plane before pairing another agent."});
    const token=randomBytes(32).toString("hex");const now=new Date().toISOString();
    state.agents[serverId]={serverId,token,connectedAt:now,lastSeen:now};state.pairingConsumed=true;state.commands[serverId]??=[];state.console[serverId]??=[];
    await save();await event(serverId,"agent.paired",{serverId});
