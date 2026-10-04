@@ -36,9 +36,9 @@ export class MinecraftRuntime implements ServerRuntime {
     const stat=await fs.statfs(this.root).catch(()=>null);
     return {
       state:this.child&&!this.child.killed?"online":"offline",
-      minecraftVersion:version,
+      ...(version ? {minecraftVersion:version} : {}),
       players:0,
-      diskFreeBytes:stat?stat.bavail*stat.bsize:undefined
+      ...(stat ? {diskFreeBytes:stat.bavail*stat.bsize} : {})
     };
   }
 
