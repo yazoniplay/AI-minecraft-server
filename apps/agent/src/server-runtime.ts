@@ -37,9 +37,9 @@ export class MinecraftRuntime implements ServerRuntime {
     } catch {}
     const stat=await fs.statfs(this.root).catch(()=>null);
     const versionLine=this.output.slice().reverse().find(line=>/Starting minecraft server version/i.test(line));
-    const detectedVersion=version??versionLine?.match(/version\\s+([0-9.]+)/i)?.[1];
-    const playerLine=this.output.slice().reverse().find(line=>/There are \\d+ of a max of \\d+ players online/i.test(line));
-    const playerCount=playerLine?Number(playerLine.match(/There are (\\d+)/i)?.[1]??0):0;
+    const detectedVersion=version??versionLine?.match(/version\s+([0-9.]+)/i)?.[1];
+    const playerLine=this.output.slice().reverse().find(line=>/There are \d+ of a max of \d+ players online/i.test(line));
+    const playerCount=playerLine?Number(playerLine.match(/There are (\d+)/i)?.[1]??0):0;
     const running=!!this.child&&this.child.exitCode===null;
     return {
       state:!running?"offline":this.ready?"online":"starting",
