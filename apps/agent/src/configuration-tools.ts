@@ -1,7 +1,7 @@
 import type {ToolContext,ToolDefinition} from "@yazoni/core";
 import {MinecraftRuntime} from "./server-runtime.js";
 
-const approve=(c:ToolContext)=>{if(!c.dryRun&&!c.approved)throw new Error("Explicit approval is required.");};
+const approve=(c:ToolContext)=>{if(c.dryRun)throw new Error("Dry-run mode never executes mutations.");if(!c.approved)throw new Error("Explicit approval is required.");};
 const obj=(v:unknown)=>typeof v==="object"&&v!==null?v as Record<string,unknown>:{};
 const str=(v:unknown)=>typeof v==="string"?v:"";
 
