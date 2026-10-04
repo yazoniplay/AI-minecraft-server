@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: yazoni-minecraft-agent
+    runtime: node
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    startCommand: node dist/agent/apps/agent/src/index.js
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: ETERNALZERO_SFTP_HOST
+        sync: false
+      - key: ETERNALZERO_SFTP_PORT
+        value: "2022"
+      - key: ETERNALZERO_SFTP_USERNAME
+        sync: false
+      - key: ETERNALZERO_SFTP_PASSWORD
+        sync: false
+      - key: ETERNALZERO_SFTP_ROOT
+        value: .
+      - key: ETERNALZERO_CACHE_ROOT
+        value: ./.yazoni-eternalzero-cache
+      - key: CONTROL_PLANE_URL
+        sync: false
+      - key: SERVER_ID
+        value: eternalzero
+      - key: PAIRING_CODE
+        sync: false
+      - key: AGENT_POLL_MS
+        value: "1000"
