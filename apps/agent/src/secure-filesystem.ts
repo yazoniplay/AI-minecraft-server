@@ -34,6 +34,14 @@ export class SecureFilesystem {
     await fs.rename(temp, target);
   }
 
+  async writeBytes(relativePath: string, content: Uint8Array): Promise<void> {
+    const target = this.resolve(relativePath);
+    await fs.mkdir(path.dirname(target), {recursive:true});
+    const temp = target + ".yazoni-tmp";
+    await fs.writeFile(temp, content, {flag:"w"});
+    await fs.rename(temp, target);
+  }
+
   async remove(relativePath: string): Promise<void> {
     const target = this.resolve(relativePath);
     if (target === this.root) throw new Error("Cannot delete the server root.");
