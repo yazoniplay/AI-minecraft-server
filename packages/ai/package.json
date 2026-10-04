@@ -16,6 +16,7 @@
     "@yazoni/tools": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "@types/node": "^22.18.6"
   }
 }
