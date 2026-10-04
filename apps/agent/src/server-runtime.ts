@@ -8,6 +8,7 @@ import type {ServerStatus} from "@yazoni/core";
 export class MinecraftRuntime implements ServerRuntime {
   private child: ChildProcessWithoutNullStreams | null = null;
   private output: string[] = [];
+  private ready = false;
   private readonly files: SecureFilesystem;
   private readonly root: string;
   private readonly javaPath: string;
@@ -23,6 +24,7 @@ export class MinecraftRuntime implements ServerRuntime {
   }
 
   private push(line:string) {
+    if(line.includes("Done (") || line.includes("For help, type")) this.ready = true;
     this.output.push(line);
     if(this.output.length>3000)this.output.splice(0,this.output.length-3000);
   }
@@ -34,10 +36,15 @@ export class MinecraftRuntime implements ServerRuntime {
       version=p.id??p.name;
     } catch {}
     const stat=await fs.statfs(this.root).catch(()=>null);
+    const versionLine=this.output.slice().reverse().find(line=>/Starting minecraft server version/i.test(line));
+    const detectedVersion=version??versionLine?.match(/version\\s+([0-9.]+)/i)?.[1];
+    const playerLine=this.output.slice().reverse().find(line=>/There are \\d+ of a max of \\d+ players online/i.test(line));
+    const playerCount=playerLine?Number(playerLine.match(/There are (\\d+)/i)?.[1]??0):0;
+    const running=!!this.child&&this.child.exitCode===null;
     return {
-      state:this.child&&!this.child.killed?"online":"offline",
-      ...(version ? {minecraftVersion:version} : {}),
-      players:0,
+      state:!running?"offline":this.ready?"online":"starting",
+      ...(detectedVersion ? {minecraftVersion:detectedVersion} : {}),
+      players:playerCount,
       ...(stat ? {diskFreeBytes:stat.bavail*stat.bsize} : {})
     };
   }
@@ -47,6 +54,7 @@ export class MinecraftRuntime implements ServerRuntime {
     if(!(await this.files.exists(this.jarName)))throw new Error("Server jar not found: "+this.jarName);
     const child=spawn(this.javaPath,["-Xms1G","-Xmx"+this.maxMemory,"-jar",this.jarName,"nogui"],{cwd:this.root,stdio:["pipe","pipe","pipe"],shell:false});
     this.child=child;
+    this.ready=false;
     child.stdout.setEncoding("utf8").on("data",(chunk:string)=>chunk.split(/\r?\n/).filter(Boolean).forEach(line=>this.push(line)));
     child.stderr.setEncoding("utf8").on("data",(chunk:string)=>chunk.split(/\r?\n/).filter(Boolean).forEach(line=>this.push("[stderr] "+line)));
     child.on("error",e=>this.push("[process error] "+e.message));
