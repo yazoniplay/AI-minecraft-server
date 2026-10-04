@@ -18,4 +18,8 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm --filter @yazoni/agent test
       - run: pnpm --filter @yazoni/agent typecheck
+      - run: pnpm --filter @yazoni/control-plane typecheck
+      - run: pnpm --filter @yazoni/web typecheck
       - run: pnpm exec tsc --noEmit -p packages/ai/tsconfig.json
+      - run: pnpm --filter @yazoni/web build
+}
