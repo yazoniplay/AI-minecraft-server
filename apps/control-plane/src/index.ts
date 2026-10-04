@@ -6,7 +6,7 @@ import type {Job,ServerStatus} from "@yazoni/core";
 
 type Agent={serverId:string;token:string;connectedAt:string;lastSeen:string};
 type Command={id:string;type:"run";jobId:string;goal:string;approved:boolean};
-type State={agents:Record<string,Agent>;jobs:Record<string,Job & {approved:boolean;answer?:string}>;commands:Record<string,Command[]>;events:Array<{id:string;timestamp:string;serverId:string;type:string;data:unknown}>;status:Record<string,ServerStatus>;console:Record<string,string[]>};
+type State={pairingConsumed?:boolean;agents:Record<string,Agent>;jobs:Record<string,Job & {approved:boolean;answer?:string}>;commands:Record<string,Command[]>;events:Array<{id:string;timestamp:string;serverId:string;type:string;data:unknown}>;status:Record<string,ServerStatus>;console:Record<string,string[]>};
 
 const port=Number(process.env.PORT??8787);
 const adminToken=process.env.CONTROL_ADMIN_TOKEN;
@@ -14,7 +14,7 @@ const pairingCode=process.env.PAIRING_CODE;
 if(!adminToken||!pairingCode)throw new Error("CONTROL_ADMIN_TOKEN and PAIRING_CODE are required.");
 
 const dataFile=path.resolve(process.env.CONTROL_STATE_FILE??"./control-state.json");
-const initial:State={agents:{},jobs:{},commands:{},events:[],status:{},console:{}};
+const initial:State={pairingConsumed:false,agents:{},jobs:{},commands:{},events:[],status:{},console:{}};
 let state:State=initial;
 try{state=JSON.parse(await fs.readFile(dataFile,"utf8")) as State;}catch{}
 const save=async()=>{await fs.mkdir(path.dirname(dataFile),{recursive:true});await fs.writeFile(dataFile,JSON.stringify(state,null,2));};
@@ -32,11 +32,11 @@ const server=createServer(async(req,res)=>{
   if(url.pathname==="/health"){return json(res,200,{ok:true,agents:Object.keys(state.agents).length});}
   if(url.pathname==="/v1/agents/pair"&&req.method==="POST"){
    const b=await body(req);
-   if(b.pairingCode!==pairingCode)return json(res,401,{error:"Invalid pairing code."});
+   if(state.pairingConsumed)return json(res,409,{error:"Pairing code has already been consumed. Generate a new pairing code on the control plane before pairing another agent."});\n   if(b.pairingCode!==pairingCode)return json(res,401,{error:"Invalid pairing code."});
    const serverId=String(b.serverId??"").trim();
    if(!/^[a-zA-Z0-9._-]{1,80}$/.test(serverId))return json(res,400,{error:"Invalid serverId."});
    const token=randomBytes(32).toString("hex");const now=new Date().toISOString();
-   state.agents[serverId]={serverId,token,connectedAt:now,lastSeen:now};state.commands[serverId]??=[];state.console[serverId]??=[];
+   state.agents[serverId]={serverId,token,connectedAt:now,lastSeen:now};state.pairingConsumed=true;state.commands[serverId]??=[];state.console[serverId]??=[];
    await save();await event(serverId,"agent.paired",{serverId});
    return json(res,200,{serverId,token});
   }
