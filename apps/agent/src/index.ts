@@ -20,7 +20,7 @@ else{
  if(!controlUrl)throw new Error("CONTROL_PLANE_URL is required.");
  const model=new GeminiFlashLiteProvider({apiKey,model:process.env.GEMINI_MODEL??"gemini-3.5-flash-lite"});
  const client=new ControlClient({baseUrl:controlUrl,serverId,pairingCode:process.env.PAIRING_CODE,root});
- const operator=new ServerAgent(model,tools,event=>audit.append(event));
+ const operator=new ServerAgent(model,tools,event=>audit.write(event));
  let consoleCursor=0;const poll=Math.max(500,Number(process.env.AGENT_POLL_MS??1000));
  const sendHeartbeat=async()=>{const lines=runtime.getRecentConsole(200);const fresh=lines.slice(consoleCursor);consoleCursor=lines.length;await client.heartbeat(await runtime.status(),fresh).catch(error=>console.error("heartbeat:",error));};
  const processCommands=async()=>{
