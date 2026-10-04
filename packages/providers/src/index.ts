@@ -15,13 +15,13 @@ export class ModrinthProvider implements PluginProvider {
     const response=await fetch(url);
     if(!response.ok)throw new Error("Modrinth search failed: "+response.status);
     const data=await response.json() as {hits?:Array<{project_id:string;title:string}>};
-    return(data.hits??[]).map(hit=>({id:hit.project_id,name:hit.title,source:"modrinth",version:"latest",minecraftVersions:minecraftVersion?[minecraftVersion]:[],dependencies:[]}));
+    return(data.hits??[]).map(hit=>({id:hit.project_id,name:hit.title,source:"modrinth" as const,version:"latest",minecraftVersions:minecraftVersion?[minecraftVersion]:[],dependencies:[]}));
   }
   async versions(id:string):Promise<PluginCandidate[]> {
     const response=await fetch(this.apiBase+"/project/"+encodeURIComponent(id)+"/version");
     if(!response.ok)throw new Error("Modrinth versions failed: "+response.status);
     const data=await response.json() as Array<{version_number:string;game_versions:string[];dependencies:Array<{project_id?:string;version_id?:string}>;files:Array<{url:string}>}>;
-    return data.map(version=>({id,name:id,source:"modrinth",version:version.version_number,minecraftVersions:version.game_versions,dependencies:version.dependencies.map(dep=>dep.project_id??dep.version_id??"").filter(Boolean),downloadUrl:version.files[0]?.url}));
+    return data.map(version=>({id,name:id,source:"modrinth" as const,version:version.version_number,minecraftVersions:version.game_versions,dependencies:version.dependencies.map(dep=>dep.project_id??dep.version_id??"").filter(Boolean),downloadUrl:version.files[0]?.url}));
   }
   async download(candidate:PluginCandidate):Promise<Uint8Array> {
     if(!candidate.downloadUrl)throw new Error("No download URL is available.");
@@ -43,7 +43,7 @@ export class SpigotProvider implements PluginProvider {
     if(!response.ok)throw new Error("Spigot resource search failed: "+response.status);
     const data=await response.json() as SpigetResource[];
     return data.filter(item=>!minecraftVersion||!item.testedVersions?.length||item.testedVersions.includes(minecraftVersion)).map(item=>({
-      id:String(item.id),name:item.name,source:"spigot",version:item.version??"latest",
+      id:String(item.id),name:item.name,source:"spigot" as const,version:item.version??"latest",
       minecraftVersions:item.testedVersions??[],dependencies:[],downloadUrl:this.api+"/resources/"+item.id+"/download"
     }));
   }
@@ -57,7 +57,7 @@ export class SpigotProvider implements PluginProvider {
     const resource=await resourceResponse.json() as SpigetResource;
     const versions=versionsResponse.ok?await versionsResponse.json() as SpigetVersion[]:[];
     const rows=versions.length?versions:[{version:resource.version}];
-    return rows.map(v=>({id,name:resource.name,source:"spigot",version:v.version??v.name??"latest",minecraftVersions:resource.testedVersions??[],dependencies:[],downloadUrl:this.api+"/resources/"+id+"/download"}));
+    return rows.map(v=>({id,name:resource.name,source:"spigot" as const,version:v.version??v.name??"latest",minecraftVersions:resource.testedVersions??[],dependencies:[],downloadUrl:this.api+"/resources/"+id+"/download"}));
   }
   async download(candidate:PluginCandidate):Promise<Uint8Array> {
     if(candidate.source!=="spigot"||!/^\d+$/.test(candidate.id))throw new Error("Invalid Spigot resource.");
