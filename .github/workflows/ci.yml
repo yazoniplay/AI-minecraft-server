@@ -22,4 +22,3 @@ jobs:
       - run: pnpm --filter @yazoni/web typecheck
       - run: pnpm exec tsc --noEmit -p packages/ai/tsconfig.json
       - run: pnpm --filter @yazoni/web build
-}
