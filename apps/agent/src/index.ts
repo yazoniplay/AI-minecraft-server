@@ -1,5 +1,6 @@
 import {createServerTools} from "@yazoni/tools";
 import {createManagementTools} from "./management-tools.js";
+import {createConfigurationTools} from "./configuration-tools.js";
 import {MinecraftRuntime} from "./server-runtime.js";
 
 const root=process.env.MINECRAFT_SERVER_DIR;
@@ -13,7 +14,7 @@ if(!root) {
     jarName:process.env.MINECRAFT_SERVER_JAR??"server.jar",
     maxMemory:process.env.MINECRAFT_MAX_MEMORY??"2G"
   });
-  const tools=[...createServerTools(runtime),...createManagementTools(runtime)];
+  const tools=[...createServerTools(runtime),...createManagementTools(runtime),...createConfigurationTools(runtime)];
   console.log("Yazoni Server Agent ready.");
   console.log("Server directory:",runtime.getServerRoot());
   console.log("Registered tools:",tools.length);
