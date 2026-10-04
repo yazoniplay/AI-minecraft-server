@@ -5,7 +5,7 @@ import {GeminiFlashLiteProvider} from "./gemini.js";
 export type {AgentMessage} from "./openai-compatible.js";
 
 export interface ModelProvider {
-  generate(input:{system:string;messages:AgentMessage[];tools:unknown[]}):Promise<{text?:string;toolCalls?:Array<{name:string;arguments:unknown;callId:string}>}>;
+  generate(input:{system:string;messages:AgentMessage[];tools:unknown[]}):Promise<{text?:string;toolCalls?:Array<{name:string;arguments:unknown;callId:string;thoughtSignature?:string}>}>;
 }
 
 export class ServerAgent {
