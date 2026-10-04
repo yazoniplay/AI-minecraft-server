@@ -5,7 +5,7 @@ An AI-native Minecraft server operations platform. The goal is to let an operato
 ## Architecture
 
 - `apps/web` — Next.js operator dashboard shell
-- `apps/agent` — local process manager, filesystem sandbox and server-management tools
+- `apps/agent` — local process manager, filesystem sandbox and server-management tools; also supports EternalZero through SFTP
 - `packages/core` — shared domain contracts
 - `packages/tools` — typed tool interfaces and foundational server/file tools
 - `packages/providers` — Modrinth and Spiget-backed Spigot resource provider adapters
@@ -28,7 +28,7 @@ An AI-native Minecraft server operations platform. The goal is to let an operato
 - Risk tiers and explicit approval checks on mutating operations
 - Filesystem unit tests and GitHub Actions CI workflow
 
-## Local setup
+## EternalZero setup\n\nEternalZero provides full SFTP access to server files, so the agent can manage plugins, configuration and other files without running a process on the hosting machine. citeturn0search3\n\nSet `ETERNALZERO_SFTP_HOST`, `ETERNALZERO_SFTP_PORT`, `ETERNALZERO_SFTP_USERNAME`, and `ETERNALZERO_SFTP_PASSWORD` (or `ETERNALZERO_SFTP_PRIVATE_KEY`) in `apps/agent/.env`. Set `ETERNALZERO_SFTP_ROOT` to the remote server directory shown by EternalZero. The agent intentionally does not pretend it can start/stop the hosted process or access a live console through SFTP; those actions remain in the EternalZero dashboard.\n\n## Local setup
 
 Requirements: Node.js 22+, Java appropriate for your Minecraft server, and pnpm 10+.
 
