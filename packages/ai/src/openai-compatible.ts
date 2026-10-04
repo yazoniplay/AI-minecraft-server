@@ -1,6 +1,6 @@
 import type {ToolDefinition} from "@yazoni/core";
 
-export type AgentMessage={role:"user"|"assistant"|"tool";content:string;toolCallId?:string;name?:string;toolCalls?:Array<{name:string;arguments:unknown;callId:string}>};
+export type AgentMessage={role:"user"|"assistant"|"tool";content:string;toolCallId?:string;name?:string;toolCalls?:Array<{name:string;arguments:unknown;callId:string;thoughtSignature?:string}>};
 
 function inputSchema(input:unknown):Record<string,unknown>{
  if(!input||typeof input!=="object"||Array.isArray(input))return{type:"object",properties:{},additionalProperties:false};
