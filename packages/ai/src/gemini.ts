@@ -24,7 +24,7 @@ function convertMessages(messages:AgentMessage[]):GeminiContent[]{
   if(message.role==="user")result.push({role:"user",parts:[{text:message.content}]});
   else if(message.role==="assistant"){
    const parts:GeminiPart[]=[];if(message.content)parts.push({text:message.content});
-   for(const call of message.toolCalls??[])parts.push({functionCall:{name:call.name,args:(call.arguments??{})}});
+   for(const call of message.toolCalls??[])parts.push({functionCall:{name:call.name,args:(call.arguments??{}) as Record<string,unknown>}});
    result.push({role:"model",parts});
   }else{
    result.push({role:"user",parts:[{functionResponse:{name:message.name??"tool",response:JSON.parse(message.content||"{}")}}]});
@@ -42,19 +42,12 @@ export class GeminiFlashLiteProvider implements ModelProvider{
  async generate(input:{system:string;messages:AgentMessage[];tools:unknown[]}):Promise<{text?:string;toolCalls?:Array<{name:string;arguments:unknown;callId:string}>}>{
   const declared=input.tools as Array<{name:string;description:string;input:unknown}>;
   const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(this.model)+":generateContent?key="+encodeURIComponent(this.options.apiKey),{
-   method:"POST",
-   headers:{"content-type":"application/json"},
-   body:JSON.stringify({
-    systemInstruction:{parts:[{text:input.system}]},
-    contents:convertMessages(input.messages),
-    tools:[{functionDeclarations:declared.map(tool=>({name:tool.name,description:tool.description,parametersJsonSchema:schema(tool.input)}))}],
-    toolConfig:{functionCallingConfig:{mode:"AUTO"}},
-    generationConfig:{temperature:0.15}
-   }),
+   method:"POST",headers:{"content-type":"application/json"},
+   body:JSON.stringify({systemInstruction:{parts:[{text:input.system}]},contents:convertMessages(input.messages),tools:[{functionDeclarations:declared.map(tool=>({name:tool.name,description:tool.description,parametersJsonSchema:schema(tool.input)}))}],toolConfig:{functionCallingConfig:{mode:"AUTO"}},generationConfig:{temperature:0.15}}),
    signal:AbortSignal.timeout(90000)
   });
   if(!response.ok)throw new Error("Gemini request failed ("+response.status+"): "+(await response.text()).slice(0,1200));
-  const data=await response.json() as {candidates?:Array<{content?:{parts?:GeminiPart[]}}>};
+  const data=await response.json() as {candidates?:Array<{content?:{parts?:GeminiPart[]}}>} ;
   const parts=data.candidates?.[0]?.content?.parts??[];
   const text=parts.filter(part=>part.text).map(part=>part.text).join("\n").trim();
   const toolCalls=parts.filter(part=>part.functionCall).map((part,index)=>({name:part.functionCall!.name,arguments:part.functionCall!.args??{},callId:"gemini-"+Date.now()+"-"+index}));
