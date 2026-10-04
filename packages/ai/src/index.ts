@@ -1,5 +1,6 @@
 import type {AuditEvent,Job,ToolContext,ToolDefinition} from "@yazoni/core";
 import type {AgentMessage} from "./openai-compatible.js";
+import {GeminiFlashLiteProvider} from "./gemini.js";
 
 export interface ModelProvider {
   generate(input:{system:string;messages:AgentMessage[];tools:unknown[]}):Promise<{text?:string;toolCalls?:Array<{name:string;arguments:unknown;callId:string}>}>;
@@ -23,22 +24,14 @@ export class ServerAgent {
       if(!response.toolCalls?.length){job.status="completed";return{job,answer:response.text??"Completed."};}
       messages.push({role:"assistant",content:response.text??"",toolCalls:response.toolCalls});
 
+      let waitingForApproval=false;
       for(const call of response.toolCalls){
         const tool=toolMap.get(call.name);
         if(!tool){messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({error:"Unknown tool"})});continue;}
         job.steps.push({id:call.callId,tool:call.name,status:"running"});
         const step=job.steps.find(item=>item.id===call.callId);
-        if(context.dryRun&&tool.risk!=="safe"){
-          if(step)step.status="dry-run";
-          messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({dryRun:true,wouldExecute:true,risk:tool.risk,approvalRequired:true})});
-          continue;
-        }
-        if(tool.risk!=="safe"&&!context.approved){
-          if(step)step.status="waiting_approval";
-          job.status="waiting_approval";
-          messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({error:"Approval required before this action can execute.",risk:tool.risk})});
-          continue;
-        }
+        if(context.dryRun&&tool.risk!=="safe"){if(step)step.status="dry-run";messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({dryRun:true,wouldExecute:true,risk:tool.risk,approvalRequired:true})});continue;}
+        if(tool.risk!=="safe"&&!context.approved){if(step)step.status="waiting_approval";job.status="waiting_approval";waitingForApproval=true;messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({error:"Approval required before this action can execute.",risk:tool.risk})});continue;}
         try{
           const result=await tool.execute(call.arguments,context);
           if(step)step.status="completed";
@@ -51,8 +44,12 @@ export class ServerAgent {
           messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({error:message})});
         }
       }
+      if(waitingForApproval)return{job,answer:"Some planned actions need your approval before the agent can continue."};
     }
     job.status="failed";
     throw new Error("Maximum tool rounds exceeded.");
   }
 }
+
+export {GeminiFlashLiteProvider};
+export {OpenAICompatibleProvider,toolsForModel} from "./openai-compatible.js";
