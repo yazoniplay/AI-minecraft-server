@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./openai-compatible": "./src/openai-compatible.ts"
+    ".": "./dist/index.js",
+    "./openai-compatible": "./dist/openai-compatible.js"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@yazoni/core": "workspace:*",
