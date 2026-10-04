@@ -1,1 +1,20 @@
-{"name":"@yazoni/ai","version":"0.1.0","private":true,"type":"module","exports":{".":"./src/index.ts"},"scripts":{"typecheck":"tsc --noEmit"},"dependencies":{"@yazoni/core":"workspace:*","@yazoni/tools":"workspace:*"},"devDependencies":{"typescript":"^5.9.2"}}
+{
+  "name": "@yazoni/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./openai-compatible": "./src/openai-compatible.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@yazoni/core": "workspace:*",
+    "@yazoni/tools": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
