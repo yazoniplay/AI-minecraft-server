@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: pnpm install --no-frozen-lockfile && pnpm build
-    startCommand: node dist/agent/apps/agent/src/index.js
+    startCommand: node apps/agent/dist/index.js
     healthCheckPath: /
     autoDeploy: true
     envVars:
