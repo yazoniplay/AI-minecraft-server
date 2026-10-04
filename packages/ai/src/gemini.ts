@@ -24,7 +24,7 @@ function convertMessages(messages:AgentMessage[]):GeminiContent[]{
   if(message.role==="user")result.push({role:"user",parts:[{text:message.content}]});
   else if(message.role==="assistant"){
    const parts:GeminiPart[]=[];if(message.content)parts.push({text:message.content});
-   for(const call of message.toolCalls??[])parts.push({functionCall:{name:call.name,args:(call.arguments??{}) as Record<string,unknown>}});
+   for(const call of message.toolCalls??[])parts.push({functionCall:{name:call.name,args:(call.arguments??{}) as Record<string,unknown>},...(call.thoughtSignature?{thoughtSignature:call.thoughtSignature}:{})});
    result.push({role:"model",parts});
   }else{
    result.push({role:"user",parts:[{functionResponse:{name:message.name??"tool",response:JSON.parse(message.content||"{}")}}]});
@@ -50,7 +50,7 @@ export class GeminiFlashLiteProvider implements ModelProvider{
   const data=await response.json() as {candidates?:Array<{content?:{parts?:GeminiPart[]}}>} ;
   const parts=data.candidates?.[0]?.content?.parts??[];
   const text=parts.filter(part=>part.text).map(part=>part.text).join("\n").trim();
-  const toolCalls=parts.filter(part=>part.functionCall).map((part,index)=>({name:part.functionCall!.name,arguments:part.functionCall!.args??{},callId:"gemini-"+Date.now()+"-"+index}));
+  const toolCalls=parts.filter(part=>part.functionCall).map((part,index)=>({name:part.functionCall!.name,arguments:part.functionCall!.args??{},callId:"gemini-"+Date.now()+"-"+index,...(part.thoughtSignature?{thoughtSignature:part.thoughtSignature}:{})}));
   return{...(text?{text}:{}),...(toolCalls.length?{toolCalls}:{})};
  }
 }
