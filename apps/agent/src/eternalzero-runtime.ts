@@ -1,12 +1,12 @@
 import SftpClient from "ssh2-sftp-client";
-import {promises as fs} from "node:fs";
+import type {ConnectOptions} from "ssh2-sftp-client";
 import path from "node:path";
 import type {ServerRuntime} from "@yazoni/tools";
 import type {ServerStatus} from "@yazoni/core";
 
 export class EternalZeroRuntime implements ServerRuntime {
   readonly kind="eternalzero-sftp" as const;
-  private readonly clientConfig:SftpClient.ConnectOptions;
+  private readonly clientConfig:ConnectOptions;
   private readonly root:string;
   private readonly cacheRoot:string;
   private readonly host:string;
