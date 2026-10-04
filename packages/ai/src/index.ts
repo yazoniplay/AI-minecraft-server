@@ -1,7 +1,58 @@
-import type{AuditEvent,Job,ToolContext,ToolDefinition}from"@yazoni/core";
-export interface ModelProvider{generate(input:{system:string;messages:Array<{role:"user"|"assistant"|"tool";content:string}>;tools:unknown[]}):Promise<{text?:string;toolCalls?:Array<{name:string;arguments:unknown;callId:string}>}>}
-export class ServerAgent{
-constructor(private model:ModelProvider,private tools:ToolDefinition[],private audit:(e:AuditEvent)=>Promise<void>){}
-async run(goal:string,context:ToolContext){const job:Job={id:crypto.randomUUID(),serverId:context.serverId,status:"planning",goal,steps:[]};const map=new Map(this.tools.map(t=>[t.name,t]));const messages:Array<{role:"user"|"assistant"|"tool";content:string}>=[{role:"user",content:goal}];
-for(let round=0;round<32;round++){job.status="running";const res=await this.model.generate({system:"You are Yazoni Server AI, an expert Minecraft server operator. Inspect before changing things. Prefer reversible operations, respect risk and approval, verify important changes, and never claim success without tool evidence.",messages,tools:this.tools.map(t=>({name:t.name,description:t.description,risk:t.risk,input:t.input}))});if(!res.toolCalls?.length){job.status="completed";return{job,answer:res.text??"Completed."};}
-for(const call of res.toolCalls){const tool=map.get(call.name);if(!tool)throw new Error("Unknown tool: "+call.name);job.steps.push({id:call.callId,tool:call.name,status:"running"});try{const output=await tool.execute(call.arguments,context);const s=job.steps.find(x=>x.id===call.callId);if(s)s.status="completed";await this.audit({id:crypto.randomUUID(),timestamp:new Date().toISOString(),actorId:context.actorId,serverId:context.serverId,tool:call.name,risk:tool.risk,input:call.arguments,outcome:context.dryRun?"dry-run":"success"});messages.push({role:"tool",content:JSON.stringify({callId:call.callId,output})});}catch(e){const error=e instanceof Error?e.message:String(e);const s=job.steps.find(x=>x.id===call.callId);if(s)s.status="failed";await this.audit({id:crypto.randomUUID(),timestamp:new Date().toISOString(),actorId:context.actorId,serverId:context.serverId,tool:call.name,risk:tool.risk,input:call.arguments,outcome:"failure",error});messages.push({role:"tool",content:JSON.stringify({callId:call.callId,error})})}}}job.status="failed";throw new Error("Maximum tool rounds exceeded.")}}
+import type {AuditEvent,Job,ToolContext,ToolDefinition} from "@yazoni/core";
+import type {AgentMessage} from "./openai-compatible.js";
+
+export interface ModelProvider {
+  generate(input:{system:string;messages:AgentMessage[];tools:unknown[]}):Promise<{text?:string;toolCalls?:Array<{name:string;arguments:unknown;callId:string}>}>;
+}
+
+export class ServerAgent {
+  constructor(private model:ModelProvider,private tools:ToolDefinition[],private audit:(event:AuditEvent)=>Promise<void>){}
+
+  async run(goal:string,context:ToolContext):Promise<{job:Job;answer:string}> {
+    const job:Job={id:crypto.randomUUID(),serverId:context.serverId,status:"planning",goal,steps:[]};
+    const toolMap=new Map(this.tools.map(tool=>[tool.name,tool]));
+    const messages:AgentMessage[]=[{role:"user",content:goal}];
+
+    for(let round=0;round<32;round++){
+      job.status="running";
+      const response=await this.model.generate({
+        system:"You are Yazoni Server AI, an expert Minecraft server operator. Inspect before changing things. Prefer reversible operations, respect risk and approval, verify important changes, and never claim success without tool evidence. If approval is missing, explain that the operation needs approval.",
+        messages,
+        tools:this.tools.map(tool=>({name:tool.name,description:tool.description+" Risk: "+tool.risk+".",risk:tool.risk,input:tool.input}))
+      });
+      if(!response.toolCalls?.length){job.status="completed";return{job,answer:response.text??"Completed."};}
+      messages.push({role:"assistant",content:response.text??"",toolCalls:response.toolCalls});
+
+      for(const call of response.toolCalls){
+        const tool=toolMap.get(call.name);
+        if(!tool){messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({error:"Unknown tool"})});continue;}
+        job.steps.push({id:call.callId,tool:call.name,status:"running"});
+        const step=job.steps.find(item=>item.id===call.callId);
+        if(context.dryRun&&tool.risk!=="safe"){
+          if(step)step.status="dry-run";
+          messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({dryRun:true,wouldExecute:true,risk:tool.risk,approvalRequired:true})});
+          continue;
+        }
+        if(tool.risk!=="safe"&&!context.approved){
+          if(step)step.status="waiting_approval";
+          job.status="waiting_approval";
+          messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({error:"Approval required before this action can execute.",risk:tool.risk})});
+          continue;
+        }
+        try{
+          const result=await tool.execute(call.arguments,context);
+          if(step)step.status="completed";
+          await this.audit({id:crypto.randomUUID(),timestamp:new Date().toISOString(),actorId:context.actorId,serverId:context.serverId,tool:call.name,risk:tool.risk,input:call.arguments,outcome:"success"});
+          messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify(result)});
+        }catch(error){
+          const message=error instanceof Error?error.message:String(error);
+          if(step)step.status="failed";
+          await this.audit({id:crypto.randomUUID(),timestamp:new Date().toISOString(),actorId:context.actorId,serverId:context.serverId,tool:call.name,risk:tool.risk,input:call.arguments,outcome:"failure",error:message});
+          messages.push({role:"tool",toolCallId:call.callId,name:call.name,content:JSON.stringify({error:message})});
+        }
+      }
+    }
+    job.status="failed";
+    throw new Error("Maximum tool rounds exceeded.");
+  }
+}
