@@ -1,0 +1,14 @@
+import type{ServerStatus,ToolContext,ToolDefinition}from"@yazoni/core";
+export interface ServerRuntime{status():Promise<ServerStatus>;start():Promise<void>;stop():Promise<void>;restart():Promise<void>;console(command:string):Promise<string>;readFile(path:string):Promise<string>;writeFile(path:string,content:string):Promise<void>;deleteFile(path:string):Promise<void>;listFiles(path:string):Promise<string[]>}
+const approval=(c:ToolContext)=>{if(!c.dryRun&&!c.approved)throw new Error("Explicit approval is required.");};
+export const createServerTools=(r:ServerRuntime):ToolDefinition[]=>[
+{name:"server.get_status",description:"Inspect server state, version, players and performance.",risk:"safe",input:{},execute:async()=>r.status()},
+{name:"server.start",description:"Start the Minecraft server process.",risk:"moderate",input:{},execute:async(_,c)=>{approval(c);await r.start();return{ok:true}}},
+{name:"server.stop",description:"Gracefully stop the Minecraft server.",risk:"destructive",input:{},execute:async(_,c)=>{approval(c);await r.stop();return{ok:true}}},
+{name:"server.restart",description:"Restart the Minecraft server.",risk:"moderate",input:{},execute:async(_,c)=>{approval(c);await r.restart();return{ok:true}}},
+{name:"server.console",description:"Execute a validated Minecraft console command.",risk:"moderate",input:{command:"string"},execute:async(i,c)=>{approval(c);const command=String((i as{command?:unknown})?.command??"");if(!command||command.length>500)throw new Error("Invalid command.");return{output:await r.console(command)}}},
+{name:"files.list",description:"List files inside the server sandbox.",risk:"safe",input:{path:"string"},execute:async(i)=>{const path=String((i as{path?:unknown})?.path??".");return{path,files:await r.listFiles(path)}}},
+{name:"files.read",description:"Read a server file.",risk:"safe",input:{path:"string"},execute:async(i)=>{const path=String((i as{path?:unknown})?.path??"");return{path,content:await r.readFile(path)}}},
+{name:"files.write",description:"Write a validated configuration or server file.",risk:"destructive",input:{path:"string",content:"string"},execute:async(i,c)=>{approval(c);const v=i as{path?:unknown;content?:unknown};if(typeof v.path!=="string"||typeof v.content!=="string")throw new Error("Invalid file input.");await r.writeFile(v.path,v.content);return{ok:true,path:v.path}}},
+{name:"files.delete",description:"Delete a server file.",risk:"critical",input:{path:"string"},execute:async(i,c)=>{approval(c);const path=String((i as{path?:unknown})?.path??"");if(!path)throw new Error("Path required.");await r.deleteFile(path);return{ok:true,path}}}
+];
