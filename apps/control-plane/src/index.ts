@@ -32,7 +32,8 @@ const server=createServer(async(req,res)=>{
   if(url.pathname==="/health"){return json(res,200,{ok:true,agents:Object.keys(state.agents).length});}
   if(url.pathname==="/v1/agents/pair"&&req.method==="POST"){
    const b=await body(req);
-   if(state.pairingConsumed)return json(res,409,{error:"Pairing code has already been consumed. Generate a new pairing code on the control plane before pairing another agent."});\n   if(b.pairingCode!==pairingCode)return json(res,401,{error:"Invalid pairing code."});
+   if(state.pairingConsumed)return json(res,409,{error:"Pairing code has already been consumed. Generate a new pairing code on the control plane before pairing another agent."});
+   if(b.pairingCode!==pairingCode)return json(res,401,{error:"Invalid pairing code."});
    const serverId=String(b.serverId??"").trim();
    if(!/^[a-zA-Z0-9._-]{1,80}$/.test(serverId))return json(res,400,{error:"Invalid serverId."});
    const token=randomBytes(32).toString("hex");const now=new Date().toISOString();
