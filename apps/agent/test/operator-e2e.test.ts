@@ -11,7 +11,7 @@ test("complete prison transformation request plans, pauses, executes, and verifi
   {name:"server.status",description:"Inspect final server state.",risk:"safe",input:{},execute:async()=>({...state,online:true})}
  ];
  let call=0;
- const model={async generate(){call++;if(call===1)return{toolCalls:[{name:"config.read",arguments:{},callId:"read"}]};if(call===2)return{toolCalls:[{name:"config.set",arguments:{mode:"adventure",motd:"Prison Server"},callId:"set"}]};if(call===3)return{toolCalls:[{name:"config.validate",arguments:{},callId:"validate"}]};if(call===4)return{toolCalls:[{name:"server.status",arguments:{},callId:"status"}]};return{text:"Prison transformation verified."}}};
+ const model={async generate(input:{system:string;messages:unknown[];tools:unknown[]}){call++;if(call===1)return{toolCalls:[{name:"config.read",arguments:{},callId:"read"}]};if(call===2)return{toolCalls:[{name:"config.set",arguments:{mode:"adventure",motd:"Prison Server"},callId:"set"}]};if(call===3)return{toolCalls:[{name:"config.validate",arguments:{},callId:"validate"}]};if(call===4)return{toolCalls:[{name:"server.status",arguments:{},callId:"status"}]};return{text:"Prison transformation verified."}}};
  const audit:AuditEvent[]=[];const write=(event:AuditEvent)=>{audit.push(event);return Promise.resolve()};
  const operator=new ServerAgent(model,tools,write);const base:ToolContext={requestId:"e2e",actorId:"test",serverId:"test",dryRun:false,approved:false};
  const waiting=await operator.run("Turn this into a prison server and verify everything works.",base,"job-e2e");assert.equal(waiting.job.status,"waiting_approval");assert.equal(state.mode,"survival");
