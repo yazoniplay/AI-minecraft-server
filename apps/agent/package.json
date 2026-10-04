@@ -1,0 +1,1 @@
+{"name":"@yazoni/agent","version":"0.1.0","private":true,"type":"module","scripts":{"dev":"tsx src/index.ts","build":"tsc","typecheck":"tsc --noEmit"},"dependencies":{"@yazoni/core":"workspace:*","@yazoni/tools":"workspace:*"},"devDependencies":{"tsx":"^4.19.2","typescript":"^5.9.2"}}
