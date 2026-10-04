@@ -91,7 +91,8 @@ const server=createServer(async(req,res)=>{
   if(approval&&req.method==="POST"){
    const jobId=approval[1];
    if(!jobId)return json(res,400,{error:"Invalid job id."});
-   const job=state.jobs[jobId];if(!job)return json(res,404,{error:"Job not found."});
+   const job=state.jobs[jobId];
+   if(!job)return json(res,404,{error:"Job not found."});
    if(job.status!=="waiting_approval")return json(res,409,{error:"Job is not waiting for approval."});
    job.approved=true;job.status="queued";state.commands[job.serverId]??=[];state.commands[job.serverId].push({id:randomBytes(12).toString("hex"),type:"run",jobId:job.id,goal:job.goal,approved:true});await save();await event(job.serverId,"job.approved",{jobId:job.id});return json(res,200,{job});
   }
