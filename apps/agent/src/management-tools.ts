@@ -1,15 +1,16 @@
 import {promises as fs} from "node:fs";
 import path from "node:path";
 import {createHash} from "node:crypto";
-import type {ToolContext,ToolDefinition,PluginCandidate} from "@yazoni/core";
+import type {ToolContext,ToolDefinition} from "@yazoni/core";
+import type {ServerRuntime} from "@yazoni/tools";
 import {ModrinthProvider,SpigotProvider} from "@yazoni/providers";
-import {MinecraftRuntime} from "./server-runtime.js";
+
 
 const approve=(c:ToolContext)=>{if(!c.dryRun&&!c.approved)throw new Error("This action requires explicit approval.");};
 const object=(v:unknown)=>typeof v==="object"&&v!==null?v as Record<string,unknown>:{};
 const text=(v:unknown)=>typeof v==="string"?v:"";
 
-export function createManagementTools(runtime:MinecraftRuntime):ToolDefinition[]{
+export function createManagementTools(runtime:ServerRuntime):ToolDefinition[]{
  const modrinth=new ModrinthProvider();const spigot=new SpigotProvider();
  const backupsRoot=path.resolve(runtime.getServerRoot(),"..","."+path.basename(runtime.getServerRoot())+"-yazoni-backups");
  const installTree=async(projectId:string,targetVersion:string|undefined,minecraftVersion:string|undefined,seen=new Set<string>()):Promise<unknown[]>=>{
