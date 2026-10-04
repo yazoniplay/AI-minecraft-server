@@ -1,11 +1,11 @@
 import type {ToolContext,ToolDefinition} from "@yazoni/core";
-import {MinecraftRuntime} from "./server-runtime.js";
+import type {ServerRuntime} from "@yazoni/tools";
 
 const approve=(c:ToolContext)=>{if(c.dryRun)throw new Error("Dry-run mode never executes mutations.");if(!c.approved)throw new Error("Explicit approval is required.");};
 const obj=(v:unknown)=>typeof v==="object"&&v!==null?v as Record<string,unknown>:{};
 const str=(v:unknown)=>typeof v==="string"?v:"";
 
-export function createConfigurationTools(runtime:MinecraftRuntime):ToolDefinition[]{
+export function createConfigurationTools(runtime:ServerRuntime):ToolDefinition[]{
  return [
   {name:"config.server_properties.read",description:"Read server.properties as parsed key/value settings.",risk:"safe",input:{},execute:async()=>{const raw=await runtime.readFile("server.properties");const values:Record<string,string>={};for(const line of raw.split(/\r?\n/)){if(!line||line.startsWith("#"))continue;const i=line.indexOf("=");if(i>0)values[line.slice(0,i)]=line.slice(i+1);}return{values};}},
   {name:"config.server_properties.set",description:"Update one server.properties setting while preserving unrelated lines.",risk:"destructive",input:{key:"string",value:"string"},execute:async(input,c)=>{approve(c);const v=obj(input);const key=str(v.key).trim();const value=str(v.value);if(!/^[a-zA-Z0-9._-]{1,80}$/.test(key))throw new Error("Invalid property key.");if(/[\r\n]/.test(value))throw new Error("Property values must be a single line.");const raw=await runtime.readFile("server.properties");const lines=raw.split(/\r?\n/);let found=false;const next=lines.map(line=>{if(line.startsWith(key+"=")){found=true;return key+"="+value;}return line;});if(!found)next.push(key+"="+value);await runtime.writeFile("server.properties",next.join("\n"));return{updated:key,value,restartRecommended:true};}},

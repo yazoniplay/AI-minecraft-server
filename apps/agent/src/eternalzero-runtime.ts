@@ -19,7 +19,7 @@ export class EternalZeroRuntime implements ServerRuntime {
     if(!options.password&&!options.privateKey)throw new Error("EternalZero SFTP requires ETERNALZERO_SFTP_PASSWORD or ETERNALZERO_SFTP_PRIVATE_KEY.");
   }
 
-  private remotePath(relativePath:string){const clean=relativePath.replace(/\\/g,"/").replace(/^\/+ /,"");if(clean.split("/").some(p=>p===".."||p==="."&&clean.includes("..")))throw new Error("Invalid remote path.");return this.root+(clean?"/"+clean:"");}
+  private remotePath(relativePath:string){const clean=relativePath.replace(/\\/g,"/").replace(/^\/+/, "");if(clean.split("/").some(p=>p===".."||p==="."&&clean.includes("..")))throw new Error("Invalid remote path.");return this.root+(clean?"/"+clean:"");}
   private async withClient<T>(fn:(s:SftpClient)=>Promise<T>):Promise<T>{const s=new SftpClient();try{await s.connect(this.clientConfig);return await fn(s)}finally{await s.end().catch(()=>{})}}
 
   async status():Promise<ServerStatus>{

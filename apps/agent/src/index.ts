@@ -15,13 +15,13 @@ else{
  const port=Number(process.env.PORT??10000);
  const healthServer=createServer((_request,response)=>{response.writeHead(200,{"content-type":"application/json"});response.end(JSON.stringify({ok:true,service:"yazoni-minecraft-agent",runtime:process.env.ETERNALZERO_SFTP_HOST?"eternalzero-sftp":"local"}));});
  healthServer.listen(port,"0.0.0.0",()=>console.log(`Health server listening on 0.0.0.0:${port}`));
- const runtime=process.env.ETERNALZERO_SFTP_HOST
+ const runtime: MinecraftRuntime|EternalZeroRuntime=process.env.ETERNALZERO_SFTP_HOST
   ? new EternalZeroRuntime({
       host:process.env.ETERNALZERO_SFTP_HOST,
       port:Number(process.env.ETERNALZERO_SFTP_PORT??22),
       username:process.env.ETERNALZERO_SFTP_USERNAME??"",
-      password:process.env.ETERNALZERO_SFTP_PASSWORD,
-      privateKey:process.env.ETERNALZERO_SFTP_PRIVATE_KEY,
+      ...(process.env.ETERNALZERO_SFTP_PASSWORD?{password:process.env.ETERNALZERO_SFTP_PASSWORD}:{}),
+      ...(process.env.ETERNALZERO_SFTP_PRIVATE_KEY?{privateKey:process.env.ETERNALZERO_SFTP_PRIVATE_KEY}:{}),
       root:process.env.ETERNALZERO_SFTP_ROOT??".",
       cacheRoot:process.env.ETERNALZERO_CACHE_ROOT??"./.yazoni-eternalzero-cache"
     })
