@@ -6,7 +6,8 @@ import type {Job,ServerStatus} from "@yazoni/core";
 
 type Agent={serverId:string;token:string;connectedAt:string;lastSeen:string};
 type Command={id:string;type:"run";jobId:string;goal:string;approved:boolean};
-type State={pairingConsumed?:boolean;agents:Record<string,Agent>;jobs:Record<string,Job & {approved:boolean;answer?:string}>;commands:Record<string,Command[]>;events:Array<{id:string;timestamp:string;serverId:string;type:string;data:unknown}>;status:Record<string,ServerStatus>;console:Record<string,string[]>};
+type StoredJob=Job & {approved:boolean;answer?:string};
+type State={pairingConsumed?:boolean;agents:Record<string,Agent>;jobs:Record<string,StoredJob>;commands:Record<string,Command[]>;events:Array<{id:string;timestamp:string;serverId:string;type:string;data:unknown}>;status:Record<string,ServerStatus>;console:Record<string,string[]>};
 
 const port=Number(process.env.PORT??8787);
 const adminToken=process.env.CONTROL_ADMIN_TOKEN;
@@ -44,25 +45,32 @@ const server=createServer(async(req,res)=>{
   const serverId=url.searchParams.get("serverId")??"";
   if(url.pathname==="/v1/agents/commands"&&req.method==="GET"){
    if(!serverId||!agentFor(req,serverId))return json(res,401,{error:"Unauthorized"});
-   const agent=state.agents[serverId];agent.lastSeen=new Date().toISOString();await save();
+   const agent=state.agents[serverId];
+   if(!agent)return json(res,401,{error:"Unauthorized"});
+   agent.lastSeen=new Date().toISOString();await save();
    return json(res,200,{commands:state.commands[serverId]??[]});
   }
   if(url.pathname==="/v1/agents/ack"&&req.method==="POST"){
    const b=await body(req);const sid=String(b.serverId??"");
    if(!sid||!agentFor(req,sid))return json(res,401,{error:"Unauthorized"});
-   state.commands[sid]=(state.commands[sid]??[]).filter(c=>c.id!==String(b.commandId));state.agents[sid].lastSeen=new Date().toISOString();await save();
+   const agent=state.agents[sid];
+   if(!agent)return json(res,401,{error:"Unauthorized"});
+   state.commands[sid]=(state.commands[sid]??[]).filter(c=>c.id!==String(b.commandId));agent.lastSeen=new Date().toISOString();await save();
    return json(res,200,{ok:true});
   }
   if(url.pathname==="/v1/agents/events"&&req.method==="POST"){
    const b=await body(req);const sid=String(b.serverId??"");
    if(!sid||!agentFor(req,sid))return json(res,401,{error:"Unauthorized"});
-   state.agents[sid].lastSeen=new Date().toISOString();
+   const agent=state.agents[sid];
+   if(!agent)return json(res,401,{error:"Unauthorized"});
+   agent.lastSeen=new Date().toISOString();
    if(b.type==="status")state.status[sid]=b.data as ServerStatus;
    if(b.type==="console"){const lines=Array.isArray(b.data?.lines)?b.data.lines.map(String):[];state.console[sid]=[...(state.console[sid]??[]),...lines].slice(-500);}
    if(b.type==="job") {
     const j=b.data as Job & {approved?:boolean;answer?:string};
-    if(state.jobs[j.id])state.jobs[j.id]={...state.jobs[j.id],...j};
-    else state.jobs[j.id]={...j,approved:false};
+    const stored:StoredJob={...j,approved:j.approved??false};
+    if(state.jobs[j.id])state.jobs[j.id]={...state.jobs[j.id],...stored};
+    else state.jobs[j.id]=stored;
    }
    await event(sid,String(b.type??"event"),b.data);await save();return json(res,200,{ok:true});
   }
@@ -75,13 +83,15 @@ const server=createServer(async(req,res)=>{
    const b=await body(req);const goal=String(b.goal??"").trim();const sid=String(b.serverId??"");
    if(!goal||goal.length>8000)return json(res,400,{error:"Goal must be 1-8000 characters."});
    if(!state.agents[sid])return json(res,409,{error:"Agent is not paired."});
-   const job:Job & {approved:boolean}={id:randomBytes(16).toString("hex"),serverId:sid,status:"queued",goal,steps:[],approved:false};
+   const job:StoredJob={id:randomBytes(16).toString("hex"),serverId:sid,status:"queued",goal,steps:[],approved:false};
    state.jobs[job.id]=job;state.commands[sid]??=[];state.commands[sid].push({id:randomBytes(12).toString("hex"),type:"run",jobId:job.id,goal,approved:false});
    await save();await event(sid,"job.created",job);return json(res,202,{job});
   }
   const approval=url.pathname.match(/^\/v1\/jobs\/([^/]+)\/approve$/);
   if(approval&&req.method==="POST"){
-   const job=state.jobs[approval[1]];if(!job)return json(res,404,{error:"Job not found."});
+   const jobId=approval[1];
+   if(!jobId)return json(res,400,{error:"Invalid job id."});
+   const job=state.jobs[jobId];if(!job)return json(res,404,{error:"Job not found."});
    if(job.status!=="waiting_approval")return json(res,409,{error:"Job is not waiting for approval."});
    job.approved=true;job.status="queued";state.commands[job.serverId]??=[];state.commands[job.serverId].push({id:randomBytes(12).toString("hex"),type:"run",jobId:job.id,goal:job.goal,approved:true});await save();await event(job.serverId,"job.approved",{jobId:job.id});return json(res,200,{job});
   }
