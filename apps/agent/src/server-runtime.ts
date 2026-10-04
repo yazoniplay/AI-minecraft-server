@@ -52,7 +52,7 @@ export class MinecraftRuntime implements ServerRuntime {
   async start():Promise<void> {
     if(this.child&&!this.child.killed)throw new Error("Server process already exists.");
     if(!(await this.files.exists(this.jarName)))throw new Error("Server jar not found: "+this.jarName);
-    const child=spawn(this.javaPath,["-Xms1G","-Xmx"+this.maxMemory,"-jar",this.jarName,"nogui"],{cwd:this.root,stdio:["pipe","pipe","pipe"],shell:false});
+    const child=spawn(this.javaPath,["-Xms512M","-Xmx"+this.maxMemory,"-jar",this.jarName,"nogui"],{cwd:this.root,stdio:["pipe","pipe","pipe"],shell:false});
     this.child=child;
     this.ready=false;
     child.stdout.setEncoding("utf8").on("data",(chunk:string)=>chunk.split(/\r?\n/).filter(Boolean).forEach(line=>this.push(line)));
@@ -66,8 +66,13 @@ export class MinecraftRuntime implements ServerRuntime {
     const child=this.child;
     if(child.stdin.writable)child.stdin.write("stop\n");
     await new Promise<void>(resolve=>{
-      const timeout=setTimeout(()=>{if(child.exitCode===null)child.kill("SIGTERM");resolve();},15000);
-      child.once("close",()=>{clearTimeout(timeout);resolve();});
+      let settled=false;
+      let graceful:ReturnType<typeof setTimeout>;
+      let force:ReturnType<typeof setTimeout>;
+      const finish=()=>{if(settled)return;settled=true;clearTimeout(graceful);clearTimeout(force);resolve();};
+      graceful=setTimeout(()=>{if(child.exitCode===null)child.kill("SIGTERM");},15000);
+      force=setTimeout(()=>{if(child.exitCode===null)child.kill("SIGKILL");finish();},20000);
+      child.once("close",finish);
     });
   }
 
