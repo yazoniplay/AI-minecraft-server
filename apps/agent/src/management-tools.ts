@@ -16,7 +16,7 @@ export function createManagementTools(runtime:MinecraftRuntime):ToolDefinition[]
   if(seen.has(projectId))return[];seen.add(projectId);
   const versions=await modrinth.versions(projectId);
   const compatible=versions.filter(v=>!minecraftVersion||v.minecraftVersions.length===0||v.minecraftVersions.includes(minecraftVersion));
-  const chosen=compatible.find(v=>targetVersion&&v.version===targetVersion)??compatible[0]??versions[0];
+  const chosen=compatible.find(v=>targetVersion&&v.version===targetVersion)??compatible[0];
   if(!chosen)throw new Error("No compatible published version found for "+projectId+(minecraftVersion?" on "+minecraftVersion:"")+".");
   if(!chosen.downloadUrl)throw new Error("Selected version has no downloadable file: "+projectId);
   const installed:unknown[]=[];
