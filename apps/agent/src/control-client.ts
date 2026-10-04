@@ -34,7 +34,7 @@ export class ControlClient{
   await fs.writeFile(this.tokenFile,this.token,{mode:0o600});
  }
 
- private async request(pathname:string,init:RequestInit={},allowReauth=true){
+ private async request(pathname:string,init:RequestInit={},allowReauth=true):Promise<any>{
   const headers=new Headers(init.headers);headers.set("content-type","application/json");
   if(this.token)headers.set("authorization","Bearer "+this.token);
   const res=await fetch(this.base+pathname,{...init,headers,signal:AbortSignal.timeout(15000)});
