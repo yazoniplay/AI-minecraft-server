@@ -23,7 +23,15 @@ export async function POST(req:NextRequest){
    filename=(meta.name??"plugin")+"-"+(meta.version?.name??"latest")+".jar";
   }
   const data=await download(url);
-  const connection={host:process.env.ETERNALZERO_SFTP_HOST,port:Number(process.env.ETERNALZERO_SFTP_PORT??2022),username:process.env.ETERNALZERO_SFTP_USERNAME,password:process.env.ETERNALZERO_SFTP_PASSWORD,readyTimeout:20000};
+  const sftpHost=process.env.ETERNALZERO_SFTP_HOST;
+  const sftpPort=Number(process.env.ETERNALZERO_SFTP_PORT??2022);
+  const sftpUsername=process.env.ETERNALZERO_SFTP_USERNAME;
+  const sftpPassword=process.env.ETERNALZERO_SFTP_PASSWORD;
+  if(!sftpHost||!sftpUsername||!sftpPassword){
+   const missing=[!sftpHost?"ETERNALZERO_SFTP_HOST":null,!sftpUsername?"ETERNALZERO_SFTP_USERNAME":null,!sftpPassword?"ETERNALZERO_SFTP_PASSWORD":null].filter(Boolean).join(", ");
+   throw new Error("SFTP configuration missing: "+missing);
+  }
+  const connection={host:sftpHost,port:sftpPort,username:sftpUsername,password:sftpPassword,readyTimeout:20000};
   let lastError:unknown;
   for(let attempt=1;attempt<=3;attempt++){
    sftp=new SftpClient();
