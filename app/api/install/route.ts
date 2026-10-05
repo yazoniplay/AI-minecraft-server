@@ -1,7 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import SftpClient from "ssh2-sftp-client";
-
-type Install={source:"Modrinth"|"Spigot";id:string};
+type Install={source:"Modrinth"|"Spigot";id:string;versionId?:string};
 function clean(name:string){return name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,180)||"plugin.jar";}
 async function download(url:string){const r=await fetch(url,{headers:{"User-Agent":"YazoniPluginDownloader/1.0"}});if(!r.ok)throw new Error(`Download failed: ${r.status}`);return Buffer.from(await r.arrayBuffer());}
 export async function POST(req:NextRequest){
@@ -11,14 +10,16 @@ export async function POST(req:NextRequest){
  try{
   let url="",filename="";
   if(body.source==="Modrinth"){
-   const versions=await fetch("https://api.modrinth.com/v2/project/"+encodeURIComponent(body.id)+"/version?limit=20",{headers:{"User-Agent":"YazoniPluginDownloader/1.0"},cache:"no-store"}).then(r=>r.json());
+   const endpoint=body.versionId?"https://api.modrinth.com/v2/version/"+encodeURIComponent(body.versionId):"https://api.modrinth.com/v2/project/"+encodeURIComponent(body.id)+"/version?limit=100";
+   const versions=body.versionId?[await fetch(endpoint,{headers:{"User-Agent":"YazoniPluginDownloader/1.0"},cache:"no-store"}).then(r=>r.json())]:await fetch(endpoint,{headers:{"User-Agent":"YazoniPluginDownloader/1.0"},cache:"no-store"}).then(r=>r.json());
    const v=versions.find((x:any)=>x.files?.some((f:any)=>f.filename?.endsWith(".jar")) )??versions[0];
    const file=v?.files?.find((f:any)=>f.primary&&f.filename.endsWith(".jar"))??v?.files?.find((f:any)=>f.filename.endsWith(".jar"));
-   if(!file)throw new Error("No plugin JAR found.");
+   if(!file)throw new Error("No plugin JAR found for that version.");
    url=file.url;filename=file.filename;
   }else{
-   url="https://api.spiget.org/v2/resources/"+encodeURIComponent(body.id)+"/download";
-   const meta=await fetch("https://api.spiget.org/v2/resources/"+encodeURIComponent(body.id),{headers:{"User-Agent":"YazoniPluginDownloader/1.0"},cache:"no-store"}).then(r=>r.json());
+   const id=body.versionId&&/^\d+$/.test(body.versionId)?body.versionId:body.id;
+   url="https://api.spiget.org/v2/resources/"+encodeURIComponent(id)+"/download";
+   const meta=await fetch("https://api.spiget.org/v2/resources/"+encodeURIComponent(id),{headers:{"User-Agent":"YazoniPluginDownloader/1.0"},cache:"no-store"}).then(r=>r.json());
    filename=(meta.name??"plugin")+"-"+(meta.version?.name??"latest")+".jar";
   }
   const data=await download(url);
