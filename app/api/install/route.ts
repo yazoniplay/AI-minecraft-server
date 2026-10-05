@@ -6,7 +6,7 @@ async function download(url:string){const r=await fetch(url,{headers:{"User-Agen
 export async function POST(req:NextRequest){
  const password=req.headers.get("x-admin-password")??"";if(!process.env.ADMIN_PASSWORD||password!==process.env.ADMIN_PASSWORD)return NextResponse.json({error:"Unauthorized"},{status:401});
  const body=await req.json() as Install;if(!body.id||!["Modrinth","Spigot"].includes(body.source))return NextResponse.json({error:"Invalid plugin."},{status:400});
- const sftp=new SftpClient();
+ let sftp:SftpClient|undefined;
  try{
   let url="",filename="";
   if(body.source==="Modrinth"){
