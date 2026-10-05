@@ -23,7 +23,13 @@ export async function POST(req:NextRequest){
    filename=(meta.name??"plugin")+"-"+(meta.version?.name??"latest")+".jar";
   }
   const data=await download(url);
-  await sftp.connect({host:process.env.ETERNALZERO_SFTP_HOST,port:Number(process.env.ETERNALZERO_SFTP_PORT??2022),username:process.env.ETERNALZERO_SFTP_USERNAME,password:process.env.ETERNALZERO_SFTP_PASSWORD});
+  const connection={host:process.env.ETERNALZERO_SFTP_HOST,port:Number(process.env.ETERNALZERO_SFTP_PORT??2022),username:process.env.ETERNALZERO_SFTP_USERNAME,password:process.env.ETERNALZERO_SFTP_PASSWORD,readyTimeout:20000};
+  let lastError:unknown;
+  for(let attempt=1;attempt<=3;attempt++){
+   sftp=new SftpClient();
+   try{await sftp.connect(connection);break}catch(e){lastError=e;await sftp.end().catch(()=>{});sftp=undefined;if(attempt<3)await new Promise(r=>setTimeout(r,1000*attempt));}
+  }
+  if(!sftp)throw lastError instanceof Error?lastError:new Error("Could not connect to the SFTP server.");
   const root=process.env.ETERNALZERO_SFTP_ROOT??".";
   const dir=root.replace(/\/$/,"")+"/plugins";
   if(!(await sftp.exists(dir)))await sftp.mkdir(dir,true);
@@ -31,5 +37,5 @@ export async function POST(req:NextRequest){
   await sftp.put(data,remote);
   return NextResponse.json({ok:true,filename:clean(filename),source:body.source,size:data.length});
  }catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Install failed"},{status:500});}
- finally{await sftp.end().catch(()=>{});}
+ finally{await sftp?.end().catch(()=>{});}
 }
