@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import SftpClient from "ssh2-sftp-client";
+
 type Install={source:"Modrinth"|"Spigot";id:string};
 function clean(name:string){return name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,180)||"plugin.jar";}
 async function download(url:string){const r=await fetch(url,{headers:{"User-Agent":"YazoniPluginDownloader/1.0"}});if(!r.ok)throw new Error(`Download failed: ${r.status}`);return Buffer.from(await r.arrayBuffer());}
